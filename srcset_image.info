@@ -1,0 +1,8 @@
+name = srcset Image
+description = Provides responsive images that utilise the `srcset` attribute.
+backdrop = 1.x
+type = module
+dependencies[] = image
+package = Media
+configure = admin/config/media/srcset-image
+

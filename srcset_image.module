@@ -1,0 +1,223 @@
+<?php
+/**
+ * @file
+ * Provides responsive images that utilise the `srcset` attribute.
+ */
+
+/**
+ * Implements hook_config_info().
+ */
+function srcset_image_config_info() {
+  return array(
+    'srcset_image.sets' => array(
+      'label' => 'srcset Image sets',
+      'group' => t('Configuration'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function srcset_image_menu() {
+  $items['admin/config/media/srcset-image'] = array(
+    'title' => 'srcset Image',
+    'description' => 'Configure srcset Image.',
+    'page callback' => 'srcset_image_sets_list',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'srcset_image.admin.inc',
+  );
+  $items['admin/config/media/srcset-image/add'] = array(
+    'title' => 'Add image set',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('srcset_image_sets_form'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'srcset_image.admin.inc',
+    'type' => MENU_LOCAL_ACTION,
+  );
+  $items['admin/config/media/srcset-image/%srcset_image_set'] = array(
+    'title' => 'Edit image set',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('srcset_image_sets_form', 4),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'srcset_image.admin.inc',
+  );
+  $items['admin/config/media/srcset-image/%srcset_image_set/delete'] = array(
+    'title' => 'Delete image set',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('srcset_image_sets_form_delete', 4),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'srcset_image.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function srcset_image_theme($existing, $type, $theme, $path) {
+  return array(
+    'srcset_image_formatter' => array(
+      'variables' => array(
+        'item' => NULL,
+        'image_set' => '',
+        'sizes' => '100vw',
+        'link' => '',
+      ),
+      'file' => 'srcset_image.theme.inc',
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function srcset_image_field_formatter_info() {
+  return array(
+    'srcset_image' => array(
+      'label' => t('srcset Image'),
+      'field types' => array('image'),
+      'settings' => array(
+        'srcset_image_set' => '',
+        'srcset_image_sizes' => '100vw',
+        'srcset_image_link' => '',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function srcset_image_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+
+  $image_sets = array();
+  $sets = config_get('srcset_image.sets');
+  foreach ($sets as $set) {
+    $image_sets[$set['machine_name']] = $set['name'];
+  }
+  $element['srcset_image_set'] = array(
+    '#type' => 'select',
+    '#title' => t('Image set'),
+    '#options' => $image_sets,
+    '#default_value' => $settings['srcset_image_set'],
+    '#empty_option' => t('- None -'),
+  );
+
+  $element['srcset_image_sizes'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Sizes'),
+    '#description' => t("This field is used as the value of the 'sizes' attribute and defaults to 100% of the viewport width."),
+    '#default_value' => $settings['srcset_image_sizes'],
+    '#states' => array(
+      'invisible' => array(
+        ':input[name$="[srcset_image_set]"]' => array('value' => ''),
+      ),
+    ),
+  );
+
+  $link_types = array(
+    'content' => t('Content'),
+    'file' => t('File'),
+  );
+  $element['srcset_image_link'] = array(
+    '#type' => 'select',
+    '#title' => t('Link image to'),
+    '#options' => $link_types,
+    '#default_value' => $settings['srcset_image_link'],
+    '#empty_option' => t('Nothing'),
+  );
+
+  return $element;
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function srcset_image_field_formatter_settings_summary($field, $instance, $view_mode) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+  $summary = array();
+
+  if (!empty($settings['srcset_image_set'])) {
+    $summary[] = t('Image set: @image_set', array('@image_set' => $settings['srcset_image_set']));
+
+    if (!empty($settings['srcset_image_sizes'])) {
+      $summary[] = t('Sizes: @sizes', array('@sizes' => filter_xss($settings['srcset_image_sizes'])));
+    }
+  }
+  else {
+    $summary[] = t('No image set selected.');
+  }
+
+  $link_types = array(
+    'content' => t('Linked to content'),
+    'file' => t('Linked to file'),
+  );
+  if (!empty($link_types[$settings['srcset_image_link']])) {
+    $summary[] = $link_types[$settings['srcset_image_link']];
+  }
+
+  return implode('<br />', $summary);
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function srcset_image_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $settings = $display['settings'];
+  $element = array();
+
+  // Load image set.
+  if (!empty($settings['srcset_image_set'])) {
+    $image_set = config_get('srcset_image.sets', $settings['srcset_image_set']);
+  }
+  else {
+    $image_set = array();
+  }
+
+  // Get URI of entity to link to.
+  if ($settings['srcset_image_link'] == 'content') {
+    $uri = entity_uri($entity_type, $entity);
+  }
+  elseif ($settings['srcset_image_link'] == 'file') {
+    $link_file = TRUE;
+  }
+
+  foreach ($items as $delta => $item) {
+    // Get URI of file to link to.
+    if (isset($link_file)) {
+      $uri = array(
+        'path' => file_create_url($item['uri']),
+        'options' => array(),
+      );
+    }
+
+    // Call theme function for output.
+    $element[$delta] = array(
+      '#theme' => 'srcset_image_formatter',
+      '#item' => $item,
+      '#image_set' => $image_set,
+      '#sizes' => filter_xss($settings['srcset_image_sizes']),
+      '#link' => isset($uri) ? $uri : '',
+    );
+  }
+
+  return $element;
+}
+
+/**
+ * Load an image set.
+ */
+function srcset_image_set_load($machine_name) {
+  $image_set = config_get('srcset_image.sets', $machine_name);
+
+  if (!empty($image_set)) {
+    return $image_set;
+  }
+  return FALSE;
+}
+
