@@ -14,7 +14,7 @@ https://css-tricks.com/responsive-images-youre-just-changing-resolutions-use-src
 
 This module integrates with Backdrop's image styles to automatically create the
 image variants you select. Simply upload a full-size image, and the different
-variants are created automatically. You can also edit the value for the `sizes`
+variants are created automatically. You can also edit the value of the `sizes`
 attribute for more fine-grained control.
 
 Installation
