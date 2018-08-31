@@ -210,6 +210,175 @@ function srcset_image_field_formatter_view($entity_type, $entity, $field, $insta
 }
 
 /**
+ * Implements hook_ckeditor_plugins().
+ */
+// function srcset_image_ckeditor_plugins() {
+//   return array(
+//     'srcset_image' => array(
+//       'path' => backdrop_get_path('module', 'srcset_image') . '/js',
+//       'file' => 'srcset_image_plugin.js',
+//       'enabled callback' => 'srcset_image_plugin_check',
+//       'required_html' => array(
+//         array(
+//           'tags' => array('img'),
+//           'attributes' => array('srcset', 'sizes'),
+//         ),
+//       ),
+//     ),
+//   );
+// }
+
+/**
+ * Enabled callback for srcset_image_ckeditor_plugins().
+ *
+ * Checks if our srcset Image plugin should be enabled based on the
+ * configuration of a text format and editor.
+ */
+// function srcset_image_plugin_check($format) {
+//   // Automatically enable srcset Image support if the BackdropImage button is
+//   // enabled.
+//   foreach ($format->editor_settings['toolbar'] as $row) {
+//     foreach ($row as $button_group) {
+//       if (in_array('BackdropImage', $button_group['items'])) {
+//         return TRUE;
+//       }
+//     }
+//   }
+//   return FALSE;
+// }
+
+/**
+ * Implements hook_form_FORM_ID_alter() for filter_admin_format_form.
+ */
+function srcset_image_form_filter_admin_format_form_alter(&$form, &$form_state, $form_id) {
+  $settings = isset($form_state['format']->editor_settings['image_upload']) ? $form_state['format']->editor_settings['image_upload'] : array();
+  $settings += array(
+    'srcset_image' => FALSE,
+  );
+
+  // Add srcset Image toggle setting.
+  if (isset($form['editor_settings']['plugins']) && isset($form['editor_settings']['plugins']['image'])) {
+    $form['editor_settings']['plugins']['image']['srcset_image'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Enable srcset Image'),
+      '#description' => t('Add srcset Image settings to the image upload form.'),
+      '#default_value' => $settings['srcset_image'],
+      '#states' => array(
+        'visible' => array(
+          ':input[data-editor-image-upload="status"]' => array('checked' => TRUE),
+        ),
+      ),
+    );
+  }
+}
+
+function srcset_image_form_filter_format_editor_image_form_alter(&$form, &$form_state) {
+  $values = array();
+  if (isset($form_state['input']['editor_object'])) {
+    $values = $form_state['input']['editor_object'];
+  }
+
+  $form['srcset'] = array(
+    '#title' => t('Srcset'),
+    '#type' => 'textfield',
+    '#default_value' => isset($values['srcset']) ? $values['srcset'] : NULL,
+    '#parents' => array('attributes', 'srcset'),
+  );
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for filter_format_editor_image_form.
+ */
+// function srcset_image_form_filter_format_editor_image_form_alter(&$form, &$form_state, $form_id) {
+//   dpm($form_state);
+//   $settings = $form_state['input']['editor_object'];
+//   // $settings += array(
+//   //   'srcset_image_set' => '',
+//   //   'srcset_image_sizes' => '100vw',
+//   // );
+//
+//   $image_sets = array();
+//   $sets = config_get('srcset_image.sets');
+//   foreach ($sets as $set) {
+//     $image_sets[$set['machine_name']] = $set['name'];
+//   }
+//   $form['srcset_image_set'] = array(
+//     '#type' => 'select',
+//     '#title' => t('srcset Image set'),
+//     '#description' => t('Select an <a href="/admin/config/media/srcset-image" target="_blank">image set</a> to make this image responsive (i.e. utilise the `srcset` attribute).'),
+//     '#options' => $image_sets,
+//     // '#default_value' => $settings['srcset_image_set'],
+//     '#empty_option' => t('- None -'),
+//   );
+//   $form['srcset_image_sizes'] = array(
+//     '#type' => 'textfield',
+//     '#title' => t('Sizes'),
+//     '#description' => t("This field is used as the value of the 'sizes' attribute and defaults to 100% of the viewport width."),
+//     // '#default_value' => $settings['srcset_image_sizes'],
+//     '#states' => array(
+//       'invisible' => array(
+//         ':input[name="srcset_image_set"]' => array('value' => ''),
+//       ),
+//     ),
+//   );
+//
+//   $form['#submit'][] = 'srcset_image_form_filter_format_editor_image_form_submit';
+// }
+
+/**
+ * Custom submit handler for filter_format_editor_image_form.
+ */
+// function srcset_image_form_filter_format_editor_image_form_submit($form, &$form_state) {
+//   dpm($form_state);
+//   $settings = $form_state['values'];
+//   $file = file_load($settings['attributes']['data-file-id']);
+//
+//   // Load image set.
+//   if (!empty($settings['srcset_image_set'])) {
+//     $image_set = config_get('srcset_image.sets', $settings['srcset_image_set']);
+//
+//     if ($image_set['image_styles']) {
+//       $srcset = array();
+//
+//       // Get image style URL and width of each image style.
+//       foreach ($image_set['image_styles'] as $image_style) {
+//         $image_style_url = image_style_url($image_style, $file->uri);
+//         $image_size = getimagesize($image_style_url);
+//         $srcset[] = $image_style_url . ' ' . $image_size[0] . 'w';
+//       }
+//
+//       // Add original image.
+//       $file_uri = file_create_url($file->uri);
+//       $file_size = getimagesize($file_uri);
+//       $srcset[] = $file_uri . ' ' . $file_size[0] . 'w';
+//
+//       // Set image attributes.
+//       $form_state['values']['attributes']['srcset'] = implode(', ', $srcset);
+//       if (!empty($settings['srcset_image_sizes'])) {
+//         $form_state['values']['attributes']['sizes'] = filter_xss($settings['srcset_image_sizes']);
+//       }
+//     }
+//   }
+//
+//   // Clean up form element values.
+//   unset($form_state['values']['srcset_image_set'], $form_state['values']['srcset_image_sizes']);
+//   dpm($form_state);
+// }
+
+/**
+ * Implements hook_ckeditor_settings_alter().
+ */
+// function srcset_image_ckeditor_settings_alter(array &$settings, $format) {
+//   dpm($settings);
+//   dpm($format);
+//
+//   //if ($format['editor_settings']['image_upload']['srcset_image']) {
+//     //$settings['backdrop']['captionFilterEnabled'] = !empty($format->filters['filter_image_caption']->status);
+//     //$settings['backdrop']['alignFilterEnabled'] = !empty($format->filters['filter_image_align']->status);
+//   //}
+// }
+
+/**
  * Load an image set.
  */
 function srcset_image_set_load($machine_name) {
