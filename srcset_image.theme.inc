@@ -6,28 +6,53 @@
 
 /**
  * Returns HTML for a srcset Image field formatter.
+ *
+ * @param array $variables
+ *   An associative array which contains:
+ *   - item: An array of image field values.
+ *   - image_set: An array representing the srcset image preset.
+ *   - original: Whether or not the original image should be included.
+ *   - sizes: The value of the srcset image size setting.
+ *   - link: An array of settings to generate a link.
  */
 function theme_srcset_image_formatter($variables) {
   $item = $variables['item'];
 
   // Do not output an empty 'title' attribute.
-  if (isset($item['title']) && backdrop_strlen($item['title']) == 0) {
+  if (empty($item['title'])) {
     unset($item['title']);
   }
 
   // Prepare srcset attribute.
-  if ($variables['image_set'] && $variables['image_set']['image_styles']) {
+  if (!empty($variables['image_set']['image_styles'])) {
     $srcset = array();
 
     // Get image style URL and width of each image style.
     foreach ($variables['image_set']['image_styles'] as $image_style) {
-      $image_style_url = image_style_url($image_style, $item['uri']);
-      $image_size = getimagesize($image_style_url);
-      $srcset[] = $image_style_url . ' ' . $image_size[0] . 'w';
+      if (!empty($image_style)) {
+        // Generate the image style derivative.
+        $style = image_style_load($image_style);
+        $style_uri = image_style_path($image_style, $item['uri']);
+        $success = file_exists($style_uri) || image_style_create_derivative($style, $item['uri'], $style_uri);
+
+        if ($success) {
+          image_style_remove_allowed_uri($style_uri);
+
+          // Get the image size.
+          $style_url = image_style_url($image_style, $item['uri']);
+          $image_size = getimagesize($style_url);
+          if (!empty($image_size)) {
+            $srcset[] = $style_url . ' ' . $image_size[0] . 'w';
+          }
+        }
+      }
     }
 
     // Add original image.
-    $srcset[] = file_create_url($item['uri']) . ' ' . $item['width'] . 'w';
+    if ($variables['original']) {
+      $srcset[] = file_create_url($item['uri']) . ' ' . $item['width'] . 'w';
+    }
+
     $item['attributes']['srcset'] = implode(', ', $srcset);
 
     // Prepare sizes attribute.
@@ -49,4 +74,3 @@ function theme_srcset_image_formatter($variables) {
 
   return $output;
 }
-

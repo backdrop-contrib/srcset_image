@@ -20,6 +20,8 @@ attribute for more fine-grained control.
 Installation
 ------------
 
+- Install the [Preset](https://github.com/backdrop-contrib/preset) module.
+
 - Install this module using the official Backdrop CMS instructions at
   https://backdropcms.org/guide/modules.
 

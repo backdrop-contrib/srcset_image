@@ -17,40 +17,51 @@ function srcset_image_config_info() {
 }
 
 /**
- * Implements hook_menu().
+ * Implements hook_preset_types().
  */
-function srcset_image_menu() {
-  $items['admin/config/media/srcset-image'] = array(
-    'title' => 'srcset Image',
-    'description' => 'Configure srcset Image.',
-    'page callback' => 'srcset_image_sets_list',
-    'access arguments' => array('administer site configuration'),
-    'file' => 'srcset_image.admin.inc',
+function srcset_image_preset_types() {
+  return array(
+    'sets' => array(
+      'name' => 'srcset Image Set',
+      'path' => 'admin/config/media/srcset-image',
+      'path_title' => 'srcset Image',
+      'path_description' => 'Configure srcset Image.',
+      'id_name' => 'Name',
+      'columns' => array(
+        'image_styles' => 'Image styles',
+      ),
+    ),
   );
-  $items['admin/config/media/srcset-image/add'] = array(
-    'title' => 'Add image set',
-    'page callback' => 'backdrop_get_form',
-    'page arguments' => array('srcset_image_sets_form'),
-    'access arguments' => array('administer site configuration'),
-    'file' => 'srcset_image.admin.inc',
-    'type' => MENU_LOCAL_ACTION,
-  );
-  $items['admin/config/media/srcset-image/%srcset_image_set'] = array(
-    'title' => 'Edit image set',
-    'page callback' => 'backdrop_get_form',
-    'page arguments' => array('srcset_image_sets_form', 4),
-    'access arguments' => array('administer site configuration'),
-    'file' => 'srcset_image.admin.inc',
-  );
-  $items['admin/config/media/srcset-image/%srcset_image_set/delete'] = array(
-    'title' => 'Delete image set',
-    'page callback' => 'backdrop_get_form',
-    'page arguments' => array('srcset_image_sets_form_delete', 4),
-    'access arguments' => array('administer site configuration'),
-    'file' => 'srcset_image.admin.inc',
-  );
+}
 
-  return $items;
+/**
+ * Implements hook_preset_form().
+ */
+function srcset_image_preset_form($preset_type, $id) {
+ $form = array();
+ $config = config('srcset_image.' . $preset_type);
+
+ // Get default values.
+ $values = ($id) ? $config->get($id) : array();
+
+ // Get image styles as options for checkboxes.
+ $options = array();
+ foreach (image_styles() as $image_style) {
+   $options[$image_style['name']] = $image_style['label'];
+ }
+
+ if ($preset_type == 'sets') {
+   $form['image_styles'] = array(
+     '#type' => 'checkboxes',
+     '#title' => t('Image styles'),
+     '#description' => t('Select the image styles that make up this image set.'),
+     '#options' => $options,
+     '#default_value' => isset($values['image_styles']) ? $values['image_styles'] : array(),
+     '#required' => TRUE,
+   );
+ }
+
+ return $form;
 }
 
 /**
@@ -62,6 +73,7 @@ function srcset_image_theme($existing, $type, $theme, $path) {
       'variables' => array(
         'item' => NULL,
         'image_set' => '',
+        'original' => TRUE,
         'sizes' => '100vw',
         'link' => '',
       ),
@@ -80,6 +92,7 @@ function srcset_image_field_formatter_info() {
       'field types' => array('image'),
       'settings' => array(
         'srcset_image_set' => '',
+        'srcset_image_original' => TRUE,
         'srcset_image_sizes' => '100vw',
         'srcset_image_link' => '',
       ),
@@ -96,8 +109,8 @@ function srcset_image_field_formatter_settings_form($field, $instance, $view_mod
 
   $image_sets = array();
   $sets = config_get('srcset_image.sets');
-  foreach ($sets as $set) {
-    $image_sets[$set['machine_name']] = $set['name'];
+  foreach ($sets as $machine_name => $set) {
+    $image_sets[$machine_name] = $set['title'];
   }
   $element['srcset_image_set'] = array(
     '#type' => 'select',
@@ -105,6 +118,13 @@ function srcset_image_field_formatter_settings_form($field, $instance, $view_mod
     '#options' => $image_sets,
     '#default_value' => $settings['srcset_image_set'],
     '#empty_option' => t('- None -'),
+  );
+
+  $element['srcset_image_original'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include original image'),
+    '#description' => t('Whether or not the original (i.e. non-image-style version) should be included in the srcset attribute.'),
+    '#default_value' => $settings['srcset_image_original'],
   );
 
   $element['srcset_image_sizes'] = array(
@@ -201,6 +221,7 @@ function srcset_image_field_formatter_view($entity_type, $entity, $field, $insta
       '#theme' => 'srcset_image_formatter',
       '#item' => $item,
       '#image_set' => $image_set,
+      '#original' => $settings['srcset_image_original'],
       '#sizes' => filter_xss($settings['srcset_image_sizes']),
       '#link' => isset($uri) ? $uri : '',
     );
@@ -208,16 +229,3 @@ function srcset_image_field_formatter_view($entity_type, $entity, $field, $insta
 
   return $element;
 }
-
-/**
- * Load an image set.
- */
-function srcset_image_set_load($machine_name) {
-  $image_set = config_get('srcset_image.sets', $machine_name);
-
-  if (!empty($image_set)) {
-    return $image_set;
-  }
-  return FALSE;
-}
-
