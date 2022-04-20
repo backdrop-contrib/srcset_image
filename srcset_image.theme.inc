@@ -40,7 +40,7 @@ function theme_srcset_image_formatter($variables) {
 
           // Get the image size.
           $style_url = image_style_url($image_style, $item['uri']);
-          $image_size = getimagesize($style_url);
+          $image_size = getimagesize($style_uri);
           if (!empty($image_size)) {
             $srcset[] = $style_url . ' ' . $image_size[0] . 'w';
           }
