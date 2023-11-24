@@ -38,30 +38,30 @@ function srcset_image_preset_types() {
  * Implements hook_preset_form().
  */
 function srcset_image_preset_form($preset_type, $id) {
- $form = array();
- $config = config('srcset_image.' . $preset_type);
+  $form = array();
+  $config = config('srcset_image.' . $preset_type);
 
- // Get default values.
- $values = ($id) ? $config->get($id) : array();
+  // Get default values.
+  $values = ($id) ? $config->get($id) : array();
 
- // Get image styles as options for checkboxes.
- $options = array();
- foreach (image_styles() as $image_style) {
-   $options[$image_style['name']] = $image_style['label'];
- }
+  // Get image styles as options for checkboxes.
+  $options = array();
+  foreach (image_styles() as $image_style) {
+    $options[$image_style['name']] = $image_style['label'];
+  }
 
- if ($preset_type == 'sets') {
-   $form['image_styles'] = array(
-     '#type' => 'checkboxes',
-     '#title' => t('Image styles'),
-     '#description' => t('Select the image styles that make up this image set.'),
-     '#options' => $options,
-     '#default_value' => isset($values['image_styles']) ? $values['image_styles'] : array(),
-     '#required' => TRUE,
-   );
- }
+  if ($preset_type == 'sets') {
+    $form['image_styles'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Image styles'),
+      '#description' => t('Select the image styles that make up this image set.'),
+      '#options' => $options,
+      '#default_value' => isset($values['image_styles']) ? $values['image_styles'] : array(),
+      '#required' => TRUE,
+    );
+  }
 
- return $form;
+  return $form;
 }
 
 /**
