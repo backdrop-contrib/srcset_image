@@ -15,7 +15,7 @@
  *   - sizes: The value of the srcset image size setting.
  *   - link: An array of settings to generate a link.
  */
-function theme_srcset_image_formatter($variables) {
+function theme_srcset_image_formatter(array $variables) {
   $item = $variables['item'];
 
   // Do not output an empty 'title' attribute.

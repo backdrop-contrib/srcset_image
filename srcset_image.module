@@ -8,12 +8,12 @@
  * Implements hook_config_info().
  */
 function srcset_image_config_info() {
-  return array(
-    'srcset_image.sets' => array(
-      'label' => 'srcset Image sets',
-      'group' => t('Configuration'),
-    ),
+  $prefixes['srcset_image.sets'] = array(
+    'group' => t('srcset Image Sets'),
+    'name_key' => 'machine_name',
+    'label_key' => 'title',
   );
+  return $prefixes;
 }
 
 /**
@@ -30,6 +30,7 @@ function srcset_image_preset_types() {
       'columns' => array(
         'image_styles' => 'Image styles',
       ),
+      'group' => t('srcset Image Sets'),
     ),
   );
 }
@@ -38,30 +39,31 @@ function srcset_image_preset_types() {
  * Implements hook_preset_form().
  */
 function srcset_image_preset_form($preset_type, $id) {
- $form = array();
- $config = config('srcset_image.' . $preset_type);
+  $form = array();
 
- // Get default values.
- $values = ($id) ? $config->get($id) : array();
+  // Get default values.
+  if ($id) {
+    $config = config_get("srcset_image.$preset_type.$id");
+  }
 
- // Get image styles as options for checkboxes.
- $options = array();
- foreach (image_styles() as $image_style) {
-   $options[$image_style['name']] = $image_style['label'];
- }
+  // Get image styles as options for checkboxes.
+  $options = array();
+  foreach (image_styles() as $image_style) {
+    $options[$image_style['name']] = $image_style['label'];
+  }
 
- if ($preset_type == 'sets') {
-   $form['image_styles'] = array(
-     '#type' => 'checkboxes',
-     '#title' => t('Image styles'),
-     '#description' => t('Select the image styles that make up this image set.'),
-     '#options' => $options,
-     '#default_value' => isset($values['image_styles']) ? $values['image_styles'] : array(),
-     '#required' => TRUE,
-   );
- }
+  if ($preset_type == 'sets') {
+    $form['image_styles'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Image styles'),
+      '#description' => t('Select the image styles that make up this image set.'),
+      '#options' => $options,
+      '#default_value' => isset($config['image_styles']) ? $config['image_styles'] : array(),
+      '#required' => TRUE,
+    );
+  }
 
- return $form;
+  return $form;
 }
 
 /**
@@ -108,7 +110,15 @@ function srcset_image_field_formatter_settings_form($field, $instance, $view_mod
   $settings = $display['settings'];
 
   $image_sets = array();
-  $sets = config_get('srcset_image.sets');
+
+  // Load all sets.
+  $filenames = config_get_names_with_prefix('srcset_image.sets');
+  foreach ($filenames as $filename) {
+    $config = config($filename);
+    $name = $config->get('machine_name');
+    $set = $config->get();
+    $sets[$name] = $set;
+  }
   foreach ($sets as $machine_name => $set) {
     $image_sets[$machine_name] = $set['title'];
   }
@@ -193,7 +203,7 @@ function srcset_image_field_formatter_view($entity_type, $entity, $field, $insta
 
   // Load image set.
   if (!empty($settings['srcset_image_set'])) {
-    $image_set = config_get('srcset_image.sets', $settings['srcset_image_set']);
+    $image_set = config_get('srcset_image.sets.' . $settings['srcset_image_set']);
   }
   else {
     $image_set = array();
