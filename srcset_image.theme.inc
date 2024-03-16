@@ -16,6 +16,7 @@
  *   - link: An array of settings to generate a link.
  */
 function theme_srcset_image_formatter(array $variables) {
+
   $item = $variables['item'];
 
   // Do not output an empty 'title' attribute.
@@ -26,7 +27,7 @@ function theme_srcset_image_formatter(array $variables) {
   // Prepare srcset attribute.
   if (!empty($variables['image_set']['image_styles'])) {
     $srcset = array();
-
+    $srcset_max_width = 0;
     // Get image style URL and width of each image style.
     foreach ($variables['image_set']['image_styles'] as $image_style) {
       if (!empty($image_style)) {
@@ -42,7 +43,12 @@ function theme_srcset_image_formatter(array $variables) {
           $style_url = image_style_url($image_style, $item['uri']);
           $image_size = getimagesize($style_uri);
           if (!empty($image_size)) {
-            $srcset[] = $style_url . ' ' . $image_size[0] . 'w';
+            $image_width = $image_size[0];
+            if ($image_width > $srcset_max_width) {
+              $srcset_max_width = $image_width;
+              $srcset_largest_uri = $style_uri;
+            }
+            $srcset[] = $style_url . ' ' . $image_width . 'w';
           }
         }
       }
@@ -51,6 +57,11 @@ function theme_srcset_image_formatter(array $variables) {
     // Add original image.
     if ($variables['original']) {
       $srcset[] = file_create_url($item['uri']) . ' ' . $item['width'] . 'w';
+    }
+    else {
+      // Replace the item URI with the largest style URI so that original file
+      // is not used.
+      $item['uri'] = $srcset_largest_uri;
     }
 
     $item['attributes']['srcset'] = implode(', ', $srcset);
