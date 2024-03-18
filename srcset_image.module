@@ -78,6 +78,7 @@ function srcset_image_theme($existing, $type, $theme, $path) {
         'original' => TRUE,
         'sizes' => '100vw',
         'link' => '',
+        'image_load' => 'auto',
       ),
       'file' => 'srcset_image.theme.inc',
     ),
@@ -97,6 +98,7 @@ function srcset_image_field_formatter_info() {
         'srcset_image_original' => TRUE,
         'srcset_image_sizes' => '100vw',
         'srcset_image_link' => '',
+        'srcset_image_load' => 'auto',
       ),
     ),
   );
@@ -161,6 +163,24 @@ function srcset_image_field_formatter_settings_form($field, $instance, $view_mod
     '#empty_option' => t('Nothing'),
   );
 
+  if (!isset($settings['srcset_image_load'])) {
+    $settings['srcset_image_load'] = 'auto';
+  }
+
+  $element['srcset_image_load'] = array(
+    '#title' => t('Image loading'),
+    '#type' => 'radios',
+    '#default_value' => $settings['srcset_image_load'],
+    '#options' => array(
+      'lazy' => t('Lazy'),
+      'auto' => t('Automatic'),
+      'eager' => t('Eager'),
+    ),
+  );
+  $element['srcset_image_load']['lazy']['#description'] = t('Defer loading offscreen images until viewers scroll nearby. "Nearby" is determined by each browser.');
+  $element['srcset_image_load']['auto']['#description'] = t('Each browser will determine whether or not to lazily load the image.');
+  $element['srcset_image_load']['eager']['#description'] = t('Load this image immediately, regardless of where it is located on the page.');
+
   return $element;
 }
 
@@ -191,6 +211,10 @@ function srcset_image_field_formatter_settings_summary($field, $instance, $view_
     $summary[] = $link_types[$settings['srcset_image_link']];
   }
 
+  if (!empty($settings['srcset_image_load']) && $settings['srcset_image_load'] != 'auto') {
+    $summary[] = t('Loading: @speed', array('@speed' => $settings['srcset_image_load']));
+  }
+
   return implode('<br />', $summary);
 }
 
@@ -217,6 +241,19 @@ function srcset_image_field_formatter_view($entity_type, $entity, $field, $insta
     $link_file = TRUE;
   }
 
+  // Get loading speed setting.
+  if (!empty($settings['srcset_image_load'])) {
+    // Although available in Chromium, the 'auto' value is not mentioned in
+    // the specification. Since it may be subject to change, we recommend not
+    // to use it until it gets officially included.
+    if ($settings['srcset_image_load'] != 'auto') {
+      $image_load = $settings['srcset_image_load'];
+    }
+    else {
+      $image_load = FALSE;
+    }
+  }
+
   foreach ($items as $delta => $item) {
     // Get URI of file to link to.
     if (isset($link_file)) {
@@ -234,6 +271,7 @@ function srcset_image_field_formatter_view($entity_type, $entity, $field, $insta
       '#original' => $settings['srcset_image_original'],
       '#sizes' => filter_xss($settings['srcset_image_sizes']),
       '#link' => isset($uri) ? $uri : '',
+      '#image_load' => (!$image_load) ? 'auto' : $image_load,
     );
   }
 

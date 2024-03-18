@@ -14,9 +14,11 @@
  *   - original: Whether or not the original image should be included.
  *   - sizes: The value of the srcset image size setting.
  *   - link: An array of settings to generate a link.
+ *   - image_load: Whether the image should be loaded 'eager', 'lazy' or
+ *     'auto'.
  */
 function theme_srcset_image_formatter(array $variables) {
-
+  object_log('theme_srcset_image_formatter:$variables', $variables);
   $item = $variables['item'];
 
   // Do not output an empty 'title' attribute.
@@ -69,6 +71,14 @@ function theme_srcset_image_formatter(array $variables) {
     // Prepare sizes attribute.
     if (!empty($variables['sizes'])) {
       $item['attributes']['sizes'] = $variables['sizes'];
+    }
+
+    // Add the loading attribute if not 'auto'.
+    // Although available in Chromium, the 'auto' value is not mentioned in
+    // the specification. Since it may be subject to change, we recommend not
+    // to use it until it gets officially included.
+    if ($variables['image_load'] != 'auto') {
+      $item['attributes']['loading'] = $variables['image_load'];
     }
   }
 
