@@ -18,7 +18,7 @@
  *     'default'.
  */
 function theme_srcset_image_formatter(array $variables) {
-  object_log('theme_srcset_image_formatter:$variables', $variables);
+
   $item = $variables['item'];
 
   // Do not output an empty 'title' attribute.
