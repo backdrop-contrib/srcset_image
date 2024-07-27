@@ -2,6 +2,10 @@ name = srcset Image
 description = Provides responsive images that utilise the `srcset` attribute.
 backdrop = 1.x
 type = module
+
+maintainers[yorkshire-pudding] = Martin Price
+maintainers_wanted = TRUE
+
 dependencies[] = image
 dependencies[] = preset
 package = Media
